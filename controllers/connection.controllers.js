@@ -7,29 +7,39 @@ export const sendConnection= async (req,res)=>{
     try {
         let {id}=req.params
         let sender=req.userId
- let user=await User.findById(sender)
+        let user=await User.findById(sender)
 
- if(sender==id){
-    return res.status(400).json({message:"you can not send request yourself"})
- }
+        if(!user){
+            return res.status(400).json({message:"User not found"})
+        }
 
- if(user.connection.includes(id)){
-    return res.status(400).json({message:"you are already connected"})
- }
+        if(sender==id){
+            return res.status(400).json({message:"you can not send request yourself"})
+        }
 
- let existingConnection=await Connection.findOne({
-    sender,
-    receiver:id,
-    status:"pending"
- })
- if(existingConnection){
-    return res.status(400).json({message:"request already exist"})
- }
+        if(user.connection && user.connection.includes(id)){
+            return res.status(400).json({message:"you are already connected"})
+        }
 
- let newRequest=await Connection.create({
-  sender,
-  receiver:id
- })
+        // Check if the receiver user exists
+        let receiverUser = await User.findById(id)
+        if(!receiverUser){
+            return res.status(400).json({message:"Receiver user not found"})
+        }
+
+        let existingConnection=await Connection.findOne({
+            sender,
+            receiver:id,
+            status:"pending"
+        })
+        if(existingConnection){
+            return res.status(400).json({message:"request already exist"})
+        }
+
+        let newRequest=await Connection.create({
+            sender,
+            receiver:id
+        })
 
  let receiverSocketId=userSocketMap.get(id)
  let senderSocketId=userSocketMap.get(sender)
