@@ -1,6 +1,29 @@
 import genToken from "../config/token.js"
 import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"
+import Post from "../models/post.model.js"
+import Connection from "../models/connection.model.js"
+import Conversation from "../models/conversation.model.js"
+import Message from "../models/message.model.js"
+import Notification from "../models/notification.model.js"
+
+// Clear all database collections (for development only)
+export const clearDatabase = async (req, res) => {
+    try {
+        await User.deleteMany({})
+        await Post.deleteMany({})
+        await Connection.deleteMany({})
+        await Conversation.deleteMany({})
+        await Message.deleteMany({})
+        await Notification.deleteMany({})
+        
+        return res.status(200).json({ message: "Database cleared successfully" })
+    } catch (error) {
+        console.log("Clear database error:", error)
+        return res.status(500).json({ message: "Failed to clear database" })
+    }
+}
+
 export const signUp=async (req,res)=>{
     try {
         const {firstName,lastName,userName,email,password}=req.body
