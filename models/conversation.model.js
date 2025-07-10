@@ -18,11 +18,16 @@ const conversationSchema = new mongoose.Schema({
 
 // Ensure participants array has exactly 2 users
 conversationSchema.pre('save', function(next) {
+    console.log("Pre-save hook - participants:", this.participants);
+    console.log("Participants length:", this.participants.length);
+    
     if (this.participants.length !== 2) {
+        console.error("Invalid participants length:", this.participants.length);
         return next(new Error('Conversation must have exactly 2 participants'));
     }
     // Sort participants to ensure consistent ordering for unique index
     this.participants.sort();
+    console.log("Sorted participants:", this.participants);
     next();
 });
 

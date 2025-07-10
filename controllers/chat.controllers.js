@@ -56,6 +56,8 @@ export const getOrCreateConversation = async (req, res) => {
         const { userId } = req.params;
         const currentUserId = req.userId;
 
+        console.log("Creating conversation between:", { currentUserId, userId });
+
         if (currentUserId === userId) {
             return res.status(400).json({ message: "Cannot create conversation with yourself" });
         }
@@ -80,10 +82,17 @@ export const getOrCreateConversation = async (req, res) => {
         }).populate('participants', 'firstName lastName profileImage');
 
         if (!conversation) {
+            console.log("No existing conversation found, creating new one...");
+            console.log("Participants to add:", [currentUserId, userId]);
+            
             try {
                 conversation = new Conversation({
                     participants: [currentUserId, userId]
                 });
+                
+                console.log("Conversation object before save:", conversation);
+                console.log("Participants array:", conversation.participants);
+                
                 await conversation.save();
                 conversation = await conversation.populate('participants', 'firstName lastName profileImage');
             } catch (error) {
