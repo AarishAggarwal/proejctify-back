@@ -1,11 +1,19 @@
 import mongoose from "mongoose";
 
 const conversationSchema = new mongoose.Schema({
-    participants: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    }],
+    participants: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        }],
+        validate: {
+            validator: function(v) {
+                return Array.isArray(v) && v.length === 2;
+            },
+            message: 'Conversation must have exactly 2 participants'
+        }
+    },
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Message"
@@ -20,9 +28,10 @@ const conversationSchema = new mongoose.Schema({
 conversationSchema.pre('save', function(next) {
     console.log("Pre-save hook - participants:", this.participants);
     console.log("Participants length:", this.participants.length);
+    console.log("Participants type:", Array.isArray(this.participants));
     
-    if (this.participants.length !== 2) {
-        console.error("Invalid participants length:", this.participants.length);
+    if (!Array.isArray(this.participants) || this.participants.length !== 2) {
+        console.error("Invalid participants:", this.participants);
         return next(new Error('Conversation must have exactly 2 participants'));
     }
     // Sort participants to ensure consistent ordering for unique index
@@ -32,11 +41,9 @@ conversationSchema.pre('save', function(next) {
 });
 
 // Create a unique index for participants to prevent duplicate conversations
-// Sort participants to ensure consistent ordering regardless of insertion order
 conversationSchema.index({ participants: 1 }, { 
     unique: true,
-    // Custom index function to ensure participants are always sorted
-    partialFilterExpression: { participants: { $size: 2 } }
+    name: 'participants_unique'
 });
 
 const Conversation = mongoose.model("Conversation", conversationSchema);
