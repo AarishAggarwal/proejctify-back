@@ -74,22 +74,46 @@ export const getOrCreateConversation = async (req, res) => {
         }
 
         // Find existing conversation or create new one
+        // Use $all to find conversations with both participants regardless of order
         let conversation = await Conversation.findOne({
             participants: { $all: [currentUserId, userId] }
-        }).populate('participants', 'name profilePicture');
+        }).populate('participants', 'firstName lastName profileImage');
 
         if (!conversation) {
-            conversation = new Conversation({
-                participants: [currentUserId, userId]
-            });
-            await conversation.save();
-            conversation = await conversation.populate('participants', 'firstName lastName profileImage');
+            try {
+                conversation = new Conversation({
+                    participants: [currentUserId, userId]
+                });
+                await conversation.save();
+                conversation = await conversation.populate('participants', 'firstName lastName profileImage');
+            } catch (error) {
+                // If duplicate key error, try to find the existing conversation again
+                if (error.code === 11000) {
+                    console.log("Duplicate key error, trying to find existing conversation...");
+                    conversation = await Conversation.findOne({
+                        participants: { $all: [currentUserId, userId] }
+                    }).populate('participants', 'firstName lastName profileImage');
+                    
+                    if (!conversation) {
+                        console.error("Duplicate key error but conversation not found:", error);
+                        return res.status(500).json({ message: "Error creating conversation - please try again" });
+                    }
+                    console.log("Found existing conversation after duplicate key error");
+                } else {
+                    console.error("Unexpected error creating conversation:", error);
+                    throw error;
+                }
+            }
         }
 
         res.status(200).json(conversation);
     } catch (error) {
         console.error("Get or create conversation error:", error);
-        res.status(500).json({ message: "Internal server error" });
+        if (error.code === 11000) {
+            res.status(409).json({ message: "Conversation already exists" });
+        } else {
+            res.status(500).json({ message: "Internal server error" });
+        }
     }
 };
 

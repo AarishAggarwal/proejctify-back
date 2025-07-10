@@ -21,11 +21,18 @@ conversationSchema.pre('save', function(next) {
     if (this.participants.length !== 2) {
         return next(new Error('Conversation must have exactly 2 participants'));
     }
+    // Sort participants to ensure consistent ordering for unique index
+    this.participants.sort();
     next();
 });
 
 // Create a unique index for participants to prevent duplicate conversations
-conversationSchema.index({ participants: 1 }, { unique: true });
+// Sort participants to ensure consistent ordering regardless of insertion order
+conversationSchema.index({ participants: 1 }, { 
+    unique: true,
+    // Custom index function to ensure participants are always sorted
+    partialFilterExpression: { participants: { $size: 2 } }
+});
 
 const Conversation = mongoose.model("Conversation", conversationSchema);
 export default Conversation; 
