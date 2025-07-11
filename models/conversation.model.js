@@ -40,11 +40,7 @@ conversationSchema.pre('save', function(next) {
     next();
 });
 
-// Create a unique index for participants to prevent duplicate conversations
-conversationSchema.index({ participants: 1 }, { 
-    unique: true,
-    name: 'participants_unique'
-});
+// Note: Indexes are managed manually via scripts to avoid conflicts
 
 const Conversation = mongoose.model("Conversation", conversationSchema);
 export default Conversation; 
