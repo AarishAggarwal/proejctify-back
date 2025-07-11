@@ -94,9 +94,12 @@ export const getOrCreateConversation = async (req, res) => {
                 console.log("Participants array:", conversation.participants);
                 
                 await conversation.save();
+                console.log("✅ Conversation saved successfully!");
                 conversation = await conversation.populate('participants', 'firstName lastName profileImage');
             } catch (error) {
-                // If duplicate key error, try to find the existing conversation again
+                console.error("Error saving conversation:", error);
+                
+                // If it's a duplicate key error, try to find the existing conversation
                 if (error.code === 11000) {
                     console.log("Duplicate key error, trying to find existing conversation...");
                     conversation = await Conversation.findOne({
@@ -110,7 +113,7 @@ export const getOrCreateConversation = async (req, res) => {
                     console.log("Found existing conversation after duplicate key error");
                 } else {
                     console.error("Unexpected error creating conversation:", error);
-                    throw error;
+                    return res.status(500).json({ message: "Error creating conversation" });
                 }
             }
         }
@@ -118,11 +121,7 @@ export const getOrCreateConversation = async (req, res) => {
         res.status(200).json(conversation);
     } catch (error) {
         console.error("Get or create conversation error:", error);
-        if (error.code === 11000) {
-            res.status(409).json({ message: "Conversation already exists" });
-        } else {
-            res.status(500).json({ message: "Internal server error" });
-        }
+        res.status(500).json({ message: "Internal server error" });
     }
 };
 
