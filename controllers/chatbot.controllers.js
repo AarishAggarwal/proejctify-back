@@ -21,6 +21,14 @@ export const chatbotResponse = async (req, res) => {
 
         console.log('Chatbot request:', message);
 
+        // TEMPORARY: Return a simple test response first
+        if (message.toLowerCase().includes('test')) {
+            console.log('Returning test response');
+            return res.status(200).json({
+                response: '🎉 Backend chatbot is working! This is a test response from the JavaScript backend.'
+            });
+        }
+
         // Extract topic from user message
         let query;
         try {
