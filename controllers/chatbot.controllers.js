@@ -5,13 +5,20 @@ import { extractTopicFromInput } from '../query_parser.js';
 export const chatbotTest = async (req, res) => {
     res.status(200).json({ 
         message: 'Chatbot endpoint is working!',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
     });
 };
 
 export const chatbotResponse = async (req, res) => {
     try {
         console.log('=== CHATBOT REQUEST RECEIVED ===');
+        console.log('Environment check:', {
+            hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+            keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
+        });
+        
         const { message } = req.body;
         
         if (!message || !message.trim()) {
@@ -73,7 +80,8 @@ export const chatbotResponse = async (req, res) => {
     } catch (error) {
         console.error('Chatbot error:', error);
         res.status(500).json({
-            response: 'Sorry, I encountered an error. Please try again.'
+            response: 'Sorry, I encountered an error. Please try again.',
+            error: error.message
         });
     }
 }; 
