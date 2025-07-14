@@ -1,12 +1,16 @@
 import express from 'express';
 import OpenAI from 'openai';
-import fetch from 'node-fetch';
 
 const router = express.Router();
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const DEEPSEEK_URL = process.env.OPENROUTER_URL; // e.g. "https://api.openrouter.ai"
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  // No baseURL needed for OpenAI
+});
 
 const SYSTEM_PROMPT = `
 You are HighSchoolTutorAI: a friendly, expert tutor for grades 9–12.
@@ -23,25 +27,18 @@ router.post('/api/chatbot', async (req, res) => {
   }
 
   try {
-    // 1) Get a base response from DeepSeek
-    const dsResp = await fetch(`${DEEPSEEK_URL}/v1/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-r1:free',
-        prompt: message,
-        max_tokens: 400,
-        temperature: 0.7,
-      }),
+    // 1. Get draft and reasoning from DeepSeek Reasoner
+    const dsResponse = await deepseek.chat.completions.create({
+      model: "deepseek-reasoner",
+      messages: [{ role: "user", content: message }],
+      max_tokens: 2048,
     });
-    const dsJson = await dsResp.json();
-    const draft = dsJson.choices?.[0]?.text?.trim();
-    if (!draft) throw new Error('DeepSeek returned no text.');
+    const reasoning = dsResponse.choices?.[0]?.message?.reasoning_content;
+    const draft = dsResponse.choices?.[0]?.message?.content;
 
-    // 2) Refine with OpenAI GPT, merging original refinement and detailed project structure
+    if (!draft) throw new Error('DeepSeek returned no content.');
+
+    // 2. Refine with OpenAI GPT
     const detailedStructure = `
 Additionally, format the project idea using exactly this structure:
 
@@ -65,11 +62,7 @@ How to Measure Success: <Metrics or outcomes>
 Final Tips for Completion: <Any final advice>
 `.trim();
 
-    const chat = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `
+    const openaiPrompt = `
 Here’s the draft reply from DeepSeek; please:
 1. Polish it for a high‑school audience.
 2. Propose one unique, sensible, original project idea.
@@ -81,18 +74,28 @@ ${draft}
 """
 
 ${detailedStructure}
-`.trim() },
+`.trim();
+
+    const openaiResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: openaiPrompt },
       ],
-      max_tokens: 700,
-      temperature: 0.8,
+      max_tokens: 1024,
     });
 
-    const finalReply = chat.choices?.[0]?.message?.content?.trim();
-    if (!finalReply) throw new Error('GPT returned no content.');
+    const finalReply = openaiResponse.choices?.[0]?.message?.content?.trim();
+    if (!finalReply) throw new Error('OpenAI returned no content.');
 
-    res.status(200).json({ reply: finalReply });
+    res.status(200).json({
+      reasoning,
+      draft,
+      reply: finalReply,
+    });
+
   } catch (err) {
-    console.error('❌ Chat error:', err);
+    console.error('❌ Chatbot error:', err);
     res.status(500).json({ error: err.message || 'Internal error.' });
   }
 });
