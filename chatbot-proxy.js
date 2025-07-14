@@ -60,7 +60,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: ideaPrompt },
       ],
-      max_tokens: 1024,
+      max_tokens: 600,
     });
 
     const draft = ideaResponse.choices?.[0]?.message?.content?.trim();
@@ -86,7 +86,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: refinePrompt },
       ],
-      max_tokens: 1024,
+      max_tokens: 600,
     });
 
     const finalReply = refineResponse.choices?.[0]?.message?.content?.trim();
