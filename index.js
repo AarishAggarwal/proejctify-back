@@ -11,7 +11,7 @@ import http from "http"
 import { Server } from "socket.io"
 import notificationRouter from "./routes/notification.routes.js"
 import chatRouter from "./routes/chat.routes.js"
-import chatbotRouter from "./routes/chatbot.routes.js"
+import chatbotProxyRouter from "./chatbot-proxy.js"
 dotenv.config()
 let app=express()
 let server=http.createServer(app)
@@ -51,7 +51,7 @@ app.use("/api/post",postRouter)
 app.use("/api/connection",connectionRouter)
 app.use("/api/notification",notificationRouter)
 app.use("/api/chat",chatRouter)
-app.use("/api/chatbot",chatbotRouter)
+app.use(chatbotProxyRouter)
 export const userSocketMap=new Map()
 io.on("connection",(socket)=>{
 
