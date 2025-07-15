@@ -25,6 +25,7 @@ router.post('/api/chatbot', async (req, res) => {
 
   try {
     console.log('Building idea prompt...');
+    // 1. Generate a project idea (with cheats/tips for high schoolers)
     const detailedStructure = `
 Additionally, format the project idea using exactly this structure:
 
@@ -46,7 +47,8 @@ Step-by-Step Execution:
 …
 How to Measure Success: <Metrics or outcomes>
 Final Tips for Completion: <Any final advice>
-`.trim();
+
+IMPORTANT: The entire response must be under 800 characters. Each idea should be concise, self-contained, and fully conveyed within this limit.`.trim();
 
     const ideaPrompt = `
 ${message}
@@ -73,11 +75,13 @@ ${detailedStructure}
       throw new Error('OpenAI (step 1) returned no content.');
     }
 
+    // 2. Refine and explain for a high schooler
     const refinePrompt = `
 Here’s a project idea draft for high schoolers. Please:
 1. Polish it for a high‑school audience.
 2. Clearly explain any cheats, tips, or shortcuts included.
 3. Make the explanation as practical and actionable as possible for a high school student.
+4. IMPORTANT: The entire response must be under 800 characters. Each idea should be concise, self-contained, and fully conveyed within this limit.
 
 """
 ${draft}
