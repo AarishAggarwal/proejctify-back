@@ -48,7 +48,7 @@ Step-by-Step Execution:
 How to Measure Success: <Metrics or outcomes>
 Final Tips for Completion: <Any final advice>
 
-IMPORTANT: The entire response must be under 800 characters. Each idea should be concise, self-contained, and fully conveyed within this limit.`.trim();
+IMPORTANT: The entire response must be under 1024 characters. The answer should be clearly structured, concise, and formatted to fit well in a chat window (use short paragraphs, lists, and clear section breaks).`.trim();
 
     const ideaPrompt = `
 ${message}
@@ -81,7 +81,7 @@ Here’s a project idea draft for high schoolers. Please:
 1. Polish it for a high‑school audience.
 2. Clearly explain any cheats, tips, or shortcuts included.
 3. Make the explanation as practical and actionable as possible for a high school student.
-4. IMPORTANT: The entire response must be under 800 characters. Each idea should be concise, self-contained, and fully conveyed within this limit.
+4. IMPORTANT: The entire response must be under 1024 characters. The answer should be clearly structured, concise, and formatted to fit well in a chat window (use short paragraphs, lists, and clear section breaks).
 
 """
 ${draft}
