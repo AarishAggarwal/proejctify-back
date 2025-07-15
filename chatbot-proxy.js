@@ -19,11 +19,12 @@ router.post('/api/chatbot', async (req, res) => {
   console.log('Received POST /api/chatbot');
   const { message } = req.body;
   if (!message) {
+    console.log('No message provided');
     return res.status(400).json({ error: 'No message provided.' });
   }
 
   try {
-    // 1. Generate a project idea (with cheats/tips for high schoolers)
+    console.log('Building idea prompt...');
     const detailedStructure = `
 Additionally, format the project idea using exactly this structure:
 
@@ -55,6 +56,7 @@ Include practical cheats, tips, or shortcuts that high school students can use t
 ${detailedStructure}
 `.trim();
 
+    console.log('Calling OpenAI for idea...');
     const ideaResponse = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -63,11 +65,14 @@ ${detailedStructure}
       ],
       max_tokens: 512,
     });
+    console.log('Received idea from OpenAI');
 
     const draft = ideaResponse.choices?.[0]?.message?.content?.trim();
-    if (!draft) throw new Error('OpenAI (step 1) returned no content.');
+    if (!draft) {
+      console.log('No draft returned from OpenAI (step 1)');
+      throw new Error('OpenAI (step 1) returned no content.');
+    }
 
-    // 2. Refine and explain for a high schooler
     const refinePrompt = `
 Here’s a project idea draft for high schoolers. Please:
 1. Polish it for a high‑school audience.
@@ -81,6 +86,7 @@ ${draft}
 ${detailedStructure}
 `.trim();
 
+    console.log('Calling OpenAI for refinement...');
     const refineResponse = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -89,10 +95,15 @@ ${detailedStructure}
       ],
       max_tokens: 512,
     });
+    console.log('Received refinement from OpenAI');
 
     const finalReply = refineResponse.choices?.[0]?.message?.content?.trim();
-    if (!finalReply) throw new Error('OpenAI (step 2) returned no content.');
+    if (!finalReply) {
+      console.log('No final reply returned from OpenAI (step 2)');
+      throw new Error('OpenAI (step 2) returned no content.');
+    }
 
+    console.log('Sending response to client');
     res.status(200).json({
       draft,
       reply: finalReply,
