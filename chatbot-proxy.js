@@ -65,7 +65,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: ideaPrompt },
       ],
-      max_tokens: 512,
+      max_tokens: 900,
     });
     console.log('Received idea from OpenAI');
 
@@ -97,7 +97,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: refinePrompt },
       ],
-      max_tokens: 512,
+      max_tokens: 900,
     });
     console.log('Received refinement from OpenAI');
 
