@@ -16,6 +16,7 @@ You are HighSchoolTutorAI: a friendly, expert tutor for grades 9–12.
 `;
 
 router.post('/api/chatbot', async (req, res) => {
+  console.log('Received POST /api/chatbot');
   const { message } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'No message provided.' });
@@ -60,7 +61,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: ideaPrompt },
       ],
-      max_tokens: 600,
+      max_tokens: 512,
     });
 
     const draft = ideaResponse.choices?.[0]?.message?.content?.trim();
@@ -86,7 +87,7 @@ ${detailedStructure}
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: refinePrompt },
       ],
-      max_tokens: 600,
+      max_tokens: 512,
     });
 
     const finalReply = refineResponse.choices?.[0]?.message?.content?.trim();
