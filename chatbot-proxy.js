@@ -15,34 +15,44 @@ You are HighSchoolTutorAI: a friendly, expert tutor for grades 9–12.
 - Always tailor content to a high‑school audience.
 `;
 
-// Helper to extract number of ideas requested
-function extractIdeaCount(message) {
-  const match = message.match(/(\d+)\s*(project|idea)/i);
-  if (match) {
-    const n = parseInt(match[1], 10);
-    if (!isNaN(n) && n > 0 && n < 10) return n;
-  }
-  return 1;
-}
-
-// Helper to detect 'more details' requests
-function isMoreDetailsRequest(message) {
-  return /more details|expand|explain|full details|step by step|breakdown|how to/i.test(message);
+// Helper: Detect if user is asking for an idea or detailed description
+function isIdeaOrDescriptionRequest(message) {
+  const keywords = [
+    'idea', 'project', 'suggest', 'suggestion', 'detailed description', 'execution plan', 'topic', 'innovative', 'creative', 'plan', 'summary', 'competition', 'step-by-step', 'steps', 'how to', 'how can I', 'can you give', 'can you provide', 'can you suggest', 'can you recommend'
+  ];
+  const lower = message.toLowerCase();
+  return keywords.some(k => lower.includes(k));
 }
 
 router.post('/api/chatbot', async (req, res) => {
   console.log('Received POST /api/chatbot');
-  const { message, lastIdea } = req.body;
+  const { message } = req.body;
   if (!message) {
     console.log('No message provided');
     return res.status(400).json({ error: 'No message provided.' });
   }
 
   try {
-    if (isMoreDetailsRequest(message) && lastIdea) {
-      // User wants more details about a specific idea
-      const detailedStructure = `
-Provide a detailed, step-by-step project plan for the following idea, using this structure:
+    if (!isIdeaOrDescriptionRequest(message)) {
+      // Counselor mode: supportive, motivational, or advice
+      const counselorPrompt = `You are a supportive high school counselor. Respond to the student's message with empathy, encouragement, and practical advice. Do not generate project ideas or detailed plans unless specifically asked. Keep your response concise and friendly.`;
+      const counselorResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: counselorPrompt + '\n\nStudent: ' + message }
+        ],
+        max_tokens: 400,
+      });
+      const reply = counselorResponse.choices?.[0]?.message?.content?.trim();
+      return res.status(200).json({ draft: reply, reply });
+    }
+
+    // --- Project idea logic (existing) ---
+    console.log('Building idea prompt...');
+    // 1. Generate a project idea (with cheats/tips for high schoolers)
+    const detailedStructure = `
+Additionally, format the project idea using exactly this structure:
 
 Project Title: <Concise, engaging title>
 Summary: <One-sentence overview>
@@ -63,63 +73,70 @@ Step-by-Step Execution:
 How to Measure Success: <Metrics or outcomes>
 Final Tips for Completion: <Any final advice>
 
-Keep the answer under 1200 characters and format for chat.`.trim();
+IMPORTANT: The entire response must be under 1024 characters. The answer should be clearly structured, concise, and formatted to fit well in a chat window (use short paragraphs, lists, and clear section breaks).`.trim();
 
-      const refinePrompt = `
-The user wants more details about this project idea:
-"""
-${lastIdea}
-"""
+    const ideaPrompt = `
+${message}
+
+Include practical cheats, tips, or shortcuts that high school students can use to make the project easier or more impressive.
 
 ${detailedStructure}
-`;
-      console.log('Calling OpenAI for more details...');
-      const refineResponse = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: refinePrompt },
-        ],
-        max_tokens: 900,
-      });
-      console.log('Received detailed response from OpenAI');
-      const reply = refineResponse.choices?.[0]?.message?.content?.trim();
-      if (!reply) throw new Error('OpenAI (details) returned no content.');
-      console.log('Sending detailed response to client');
-      return res.status(200).json({ reply });
-    }
+`.trim();
 
-    // Otherwise, generate project ideas (short format)
-    const ideaCount = extractIdeaCount(message);
-    const ideaPrompt = `
-The user is asking for project ideas. For each idea, return ONLY:
-- Project Title
-- Unique Selling Point (USP)
-- Recommended Competition (name + deadline)
-- Cheats (AI to use, website, or shortcut to make the project easier)
-
-If the user asks for multiple ideas, return that many ideas in a numbered list. Do NOT include any other details unless the user specifically asks for more.
-
-Format:
-1. Project Title: ...\n   USP: ...\n   Competition: ...\n   Cheats: ...
-
-Give exactly ${ideaCount} idea${ideaCount > 1 ? 's' : ''}.
-Keep each idea concise and under 300 characters. Format for chat.`.trim();
-
-    console.log('Calling OpenAI for idea(s)...');
+    console.log('Calling OpenAI for idea...');
     const ideaResponse = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: ideaPrompt + '\n\nUser message: ' + message },
+        { role: 'user', content: ideaPrompt },
       ],
       max_tokens: 900,
     });
-    console.log('Received idea(s) from OpenAI');
-    const reply = ideaResponse.choices?.[0]?.message?.content?.trim();
-    if (!reply) throw new Error('OpenAI (ideas) returned no content.');
-    console.log('Sending idea(s) response to client');
-    res.status(200).json({ reply });
+    console.log('Received idea from OpenAI');
+
+    const draft = ideaResponse.choices?.[0]?.message?.content?.trim();
+    if (!draft) {
+      console.log('No draft returned from OpenAI (step 1)');
+      throw new Error('OpenAI (step 1) returned no content.');
+    }
+
+    // 2. Refine and explain for a high schooler
+    const refinePrompt = `
+Here’s a project idea draft for high schoolers. Please:
+1. Polish it for a high‑school audience.
+2. Clearly explain any cheats, tips, or shortcuts included.
+3. Make the explanation as practical and actionable as possible for a high school student.
+4. IMPORTANT: The entire response must be under 1024 characters. The answer should be clearly structured, concise, and formatted to fit well in a chat window (use short paragraphs, lists, and clear section breaks).
+
+"""
+${draft}
+"""
+
+${detailedStructure}
+`.trim();
+
+    console.log('Calling OpenAI for refinement...');
+    const refineResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: refinePrompt },
+      ],
+      max_tokens: 900,
+    });
+    console.log('Received refinement from OpenAI');
+
+    const finalReply = refineResponse.choices?.[0]?.message?.content?.trim();
+    if (!finalReply) {
+      console.log('No final reply returned from OpenAI (step 2)');
+      throw new Error('OpenAI (step 2) returned no content.');
+    }
+
+    console.log('Sending response to client');
+    res.status(200).json({
+      draft,
+      reply: finalReply,
+    });
   } catch (err) {
     console.error('❌ Chatbot error:', err);
     res.status(500).json({ error: err.message || 'Internal error.' });
