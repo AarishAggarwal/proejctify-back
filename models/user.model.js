@@ -63,7 +63,9 @@ const userSchema=new mongoose.Schema({
        { type:mongoose.Schema.Types.ObjectId,
         ref:"User"
        }
-    ]
+    ],
+    resetPasswordToken: String,
+    resetPasswordExpiry: Date,
 
 },{timestamps:true})
 
